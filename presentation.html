@@ -221,7 +221,7 @@
     .funnel-wrap {
       display: flex; align-items: flex-end;
       gap: clamp(0.4rem, 0.9vw, 0.8rem);
-      flex: 1; min-height: 0;
+      width: 100%;
     }
     .fstage { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.4em; position: relative; }
     .fbar {
@@ -636,12 +636,12 @@
      SLIDE 5 — FUNNEL
 ═══════════════════════════════════════════════════════ -->
 <section class="slide" id="s5">
-  <div class="slide-content" style="justify-content:center;">
+  <div class="slide-content" style="justify-content:flex-start;">
     <div class="label r d1">The Booking Funnel</div>
-    <h2 class="r d2">Both opportunities operate where the transaction is already in progress — not at the top of the funnel.</h2>
-    <div class="divider r d3"></div>
+    <h2 class="r d2" style="margin-bottom:0;">Both opportunities operate where the transaction is already in progress — not at the top of the funnel.</h2>
 
-    <div class="funnel-wrap r d4" id="funnel" style="align-items:flex-end;">
+    <div style="flex:1;display:flex;align-items:center;width:100%;">
+    <div class="funnel-wrap r d4" id="funnel" style="align-items:flex-end;width:100%;">
       <div class="fstage">
         <div class="fbar" style="height:clamp(130px,23vh,190px);background:linear-gradient(135deg,#fd4b23,#ff7050);">100%</div>
         <div class="flabel">Search<br/>Session</div>
@@ -668,6 +668,7 @@
         <div class="fbar" style="height:clamp(30px,5.5vh,46px);background:var(--green);">~14%</div>
         <div class="flabel">Books<br/>Again</div>
       </div>
+    </div>
     </div>
 
     <p class="footnote r d5">* Percentages are industry-standard hypotheses from Phocuswright and PlanetHMS hotel booking benchmarks, not Engine's confirmed conversion data. See <a href="#s2">Slide 2</a> for assumption basis.</p>
