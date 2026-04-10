@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Engine Lodging — PM Case Study · Akshay Sinha</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --bg-card: #141414;
+      --bg-card-2: #1a1a1a;
+      --orange: #fd4b23;
+      --orange-dim: rgba(253,75,35,0.1);
+      --orange-border: rgba(253,75,35,0.3);
+      --yellow: #ffb200;
+      --yellow-dim: rgba(255,178,0,0.1);
+      --green: #22c55e;
+      --green-dim: rgba(34,197,94,0.1);
+      --green-border: rgba(34,197,94,0.28);
+      --red: #ef4444;
+      --red-dim: rgba(239,68,68,0.1);
+      --text: #ffffff;
+      --text-2: #888888;
+      --text-3: #333333;
+      --border: rgba(255,255,255,0.07);
+      --font: 'Manrope', sans-serif;
+
+      /* Type scale — readable at minimum */
+      --title-size: clamp(2.4rem, 6vw, 4.8rem);
+      --h2-size: clamp(1.25rem, 2.5vw, 2rem);
+      --body-size: clamp(0.9rem, 1.4vw, 1.05rem);
+      --small-size: clamp(0.82rem, 1.1vw, 0.95rem);
+      --xs-size: clamp(0.72rem, 0.9vw, 0.8rem);
+
+      /* Spacing — generous, confident */
+      --pad: clamp(2.5rem, 5vw, 5rem);
+      --pad-v: clamp(2rem, 3.5vh, 3.5rem);
+      --gap: clamp(1rem, 1.8vw, 1.6rem);
+      --card-pad: clamp(1.2rem, 2vw, 1.75rem);
+
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      --dur: 0.6s;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow-x: hidden; }
+    html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); }
+
+    /* ── SLIDE SHELL ── */
+    .slide {
+      width: 100vw; height: 100vh; height: 100dvh;
+      overflow: hidden; scroll-snap-align: start;
+      display: flex; flex-direction: column;
+      position: relative; background: var(--bg);
+    }
+    .slide-content {
+      flex: 1; display: flex; flex-direction: column;
+      overflow: hidden;
+      padding: var(--pad-v) var(--pad);
+      gap: var(--gap);
+    }
+    .slide-content.center { justify-content: center; align-items: flex-start; }
+    .slide-content.row {
+      flex-direction: row;
+      gap: clamp(2.5rem, 4.5vw, 5rem);
+    }
+    .col { flex: 1; display: flex; flex-direction: column; gap: clamp(0.75rem, 1.2vh, 1.1rem); min-width: 0; }
+
+    /* ── PROGRESS BAR ── */
+    #progress {
+      position: fixed; top: 0; left: 0; height: 2px;
+      background: linear-gradient(90deg, var(--orange), var(--yellow));
+      z-index: 100; transition: width 0.3s ease; width: 0%;
+    }
+
+    /* ── NAV DOTS — pill on active ── */
+    #navDots {
+      position: fixed; right: 1.4rem; top: 50%;
+      transform: translateY(-50%);
+      display: flex; flex-direction: column; gap: 12px; z-index: 100;
+    }
+    .dot {
+      width: 7px; height: 7px; border-radius: 999px;
+      background: rgba(255,255,255,0.18); cursor: pointer;
+      border: none; padding: 0;
+      transition: width 0.3s var(--ease), background 0.3s ease;
+    }
+    .dot.active {
+      background: var(--orange);
+      width: 26px;
+    }
+
+    /* ── SLIDE NUMBER ── */
+    .slide-num {
+      position: absolute; bottom: 1.2rem; right: var(--pad);
+      font-size: var(--xs-size); color: var(--text-3);
+      font-weight: 600; letter-spacing: 0.1em;
+    }
+
+    /* ── REVEAL ANIMATIONS ── */
+    .r { opacity: 0; transform: translateY(18px); transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
+    .slide.visible .r { opacity: 1; transform: none; }
+    .d1{transition-delay:0.04s} .d2{transition-delay:0.12s} .d3{transition-delay:0.2s}
+    .d4{transition-delay:0.28s} .d5{transition-delay:0.36s} .d6{transition-delay:0.44s}
+    .d7{transition-delay:0.52s} .d8{transition-delay:0.6s}
+
+    /* ── TYPE UTILITIES ── */
+    .label {
+      font-size: var(--xs-size); font-weight: 700;
+      letter-spacing: 0.18em; text-transform: uppercase; color: var(--orange);
+    }
+    .divider {
+      width: 2.5rem; height: 3px; flex-shrink: 0;
+      background: linear-gradient(90deg, var(--orange), var(--yellow));
+      border-radius: 2px;
+    }
+    h1 { font-size: var(--title-size); font-weight: 900; line-height: 1.05; }
+    h2 { font-size: var(--h2-size); font-weight: 800; line-height: 1.15; }
+    .body { font-size: var(--body-size); color: var(--text-2); line-height: 1.7; }
+    .org { color: var(--orange); }
+    .yel { color: var(--yellow); }
+    .grn { color: var(--green); }
+    .muted { color: var(--text-2); }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 14px; padding: var(--card-pad);
+    }
+    .card-orange { border-color: var(--orange-border); }
+    .card-green { border-color: var(--green-border); }
+
+    /* ── STAT BLOCK ── */
+    .stat-num { font-size: clamp(2rem, 4.5vw, 3.6rem); font-weight: 900; line-height: 1; letter-spacing: -0.02em; }
+    .stat-caption { font-size: var(--small-size); color: var(--text-2); line-height: 1.5; margin-top: 0.35em; }
+
+    /* ── TAGS ── */
+    .tag {
+      display: inline-block; padding: 0.2em 0.7em; border-radius: 5px;
+      font-size: var(--xs-size); font-weight: 700; letter-spacing: 0.04em;
+    }
+    .tag-org { background: var(--orange-dim); color: var(--orange); border: 1px solid var(--orange-border); }
+    .tag-yel { background: var(--yellow-dim); color: var(--yellow); border: 1px solid rgba(255,178,0,0.3); }
+    .tag-grn { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-border); }
+    .tag-red { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.28); }
+
+    /* ── BULLET LIST ── */
+    .blist { display: flex; flex-direction: column; gap: 0.55rem; }
+    .bitem { display: flex; gap: 0.6rem; font-size: var(--small-size); color: var(--text-2); line-height: 1.5; }
+    .bitem .bullet { color: var(--orange); flex-shrink: 0; font-weight: 800; min-width: 1em; }
+    .bitem strong { color: var(--text); }
+
+    /* ── SOURCE / FOOTNOTE ── */
+    .source { font-size: var(--xs-size); color: var(--text-3); font-style: italic; line-height: 1.4; }
+    .source a { color: var(--text-3); text-decoration: underline; text-underline-offset: 2px; }
+    .source a:hover { color: var(--text-2); }
+    .footnote { font-size: var(--xs-size); color: var(--text-3); line-height: 1.45; font-style: italic; }
+    .footnote a { color: rgba(255,178,0,0.55); text-decoration: underline; text-underline-offset: 2px; }
+
+    /* ══════════════════════════════════════
+       SLIDE 2 — ASSUMPTIONS LIST
+    ══════════════════════════════════════ */
+    .assume-list { display: flex; flex-direction: column; gap: 0; flex: 1; }
+    .assume-item {
+      display: grid;
+      grid-template-columns: 1.5rem 18ch 1fr 14ch;
+      gap: 0 clamp(1.2rem, 2vw, 2rem);
+      padding: clamp(0.65rem, 1.1vh, 0.9rem) 0;
+      border-bottom: 1px solid var(--border);
+      align-items: baseline;
+    }
+    .assume-item:first-child { border-top: 1px solid var(--border); }
+    .assume-num { font-size: var(--small-size); font-weight: 700; color: var(--orange); }
+    .assume-name { font-size: var(--small-size); font-weight: 700; color: var(--text); }
+    .assume-value { font-size: var(--small-size); color: var(--text-2); line-height: 1.45; }
+    .assume-src { font-size: var(--xs-size); color: var(--text-3); font-style: italic; text-align: right; }
+    .assume-src a { color: var(--text-3); text-decoration: underline; text-underline-offset: 2px; }
+
+    /* ══════════════════════════════════════
+       SLIDE 3 — MARKET STATS (borderless)
+    ══════════════════════════════════════ */
+    .market-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: clamp(1.5rem, 3vw, 3rem); flex: 1; }
+    .market-stat { display: flex; flex-direction: column; justify-content: center; padding: 0 clamp(0.5rem, 1vw, 1rem); }
+    .market-stat + .market-stat { border-left: 1px solid var(--border); }
+
+    /* ══════════════════════════════════════
+       SLIDE 4 — MY APPROACH
+    ══════════════════════════════════════ */
+    .opp-hero { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+    .opp-hero-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 14px; padding: var(--card-pad);
+      display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .opp-hero-card.o1 { border-left: 3px solid var(--orange); }
+    .opp-hero-card.o2 { border-left: 3px solid var(--yellow); }
+    .opp-title { font-size: clamp(1rem, 1.8vw, 1.35rem); font-weight: 800; }
+    .opp-desc { font-size: var(--small-size); color: var(--text-2); line-height: 1.55; }
+    .opp-gbv { font-size: clamp(1.3rem, 2.5vw, 2rem); font-weight: 900; margin-top: 0.25rem; }
+
+    .surface-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+    .surface-item {
+      padding: clamp(0.6rem, 1vh, 0.85rem) 0;
+      border-bottom: 1px solid var(--border);
+      display: flex; gap: 0.65rem; align-items: baseline;
+    }
+    .surface-item:nth-child(odd) { padding-right: clamp(1rem, 2vw, 2rem); border-right: 1px solid var(--border); }
+    .surface-item:nth-child(even) { padding-left: clamp(1rem, 2vw, 2rem); }
+    .surface-item:nth-last-child(-n+2) { border-bottom: none; }
+    .surface-num { font-size: var(--xs-size); font-weight: 700; color: var(--orange); flex-shrink: 0; }
+    .surface-text { font-size: var(--small-size); color: var(--text-2); line-height: 1.45; }
+    .surface-text strong { color: var(--text); }
+
+    /* ══════════════════════════════════════
+       SLIDE 5 — FUNNEL (fills the slide)
+    ══════════════════════════════════════ */
+    .funnel-wrap {
+      display: flex; align-items: flex-end;
+      gap: clamp(0.4rem, 0.9vw, 0.8rem);
+      flex: 1; min-height: 0;
+    }
+    .fstage { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.4em; position: relative; }
+    .fbar {
+      width: 100%; border-radius: 8px 8px 0 0;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; color: white;
+      font-size: clamp(0.7rem, 1.3vw, 1rem);
+      letter-spacing: -0.01em;
+    }
+    .farrow { color: var(--text-3); font-size: 1.1rem; flex-shrink: 0; padding-bottom: clamp(40px, 8vh, 70px); }
+    .flabel { font-size: clamp(0.55rem, 0.82vw, 0.72rem); color: var(--text-2); text-align: center; line-height: 1.3; font-weight: 600; }
+    .fbadge {
+      position: absolute; bottom: calc(100% + 0.5em); left: 50%; transform: translateX(-50%);
+      font-size: clamp(0.5rem, 0.7vw, 0.62rem); font-weight: 800;
+      padding: 0.15em 0.55em; border-radius: 4px; white-space: nowrap;
+    }
+    .fbadge-org { background: var(--orange); color: white; }
+    .fbadge-yel { background: var(--yellow); color: #000; }
+
+    /* ══════════════════════════════════════
+       SLIDE 6 — ANDROID EVIDENCE
+    ══════════════════════════════════════ */
+    .rating-hero {
+      display: flex; align-items: center; gap: clamp(1.5rem, 3vw, 3rem);
+    }
+    .rating-num { font-size: clamp(3.5rem, 8vw, 6.5rem); font-weight: 900; line-height: 1; letter-spacing: -0.03em; }
+    .rating-vs { font-size: clamp(1rem, 2vw, 1.5rem); color: var(--text-3); font-weight: 300; }
+    .rating-gap {
+      margin-left: auto;
+      text-align: right;
+    }
+    .rating-gap-num { font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-weight: 900; color: var(--red); line-height: 1; }
+    .review-card {
+      border-left: 3px solid rgba(239,68,68,0.4);
+      padding-left: clamp(0.75rem, 1.2vw, 1rem);
+      padding-top: 0.15rem; padding-bottom: 0.15rem;
+    }
+    .review-stars { font-size: var(--xs-size); letter-spacing: 0.04em; margin-bottom: 0.15em; }
+    .review-text { font-size: var(--small-size); color: var(--text-2); line-height: 1.55; font-style: italic; }
+    .review-meta { font-size: var(--xs-size); color: var(--text-3); margin-top: 0.15em; }
+
+    /* ══════════════════════════════════════
+       SLIDE 7 — ANDROID PLAN
+    ══════════════════════════════════════ */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .titem {
+      display: flex; gap: clamp(0.75rem, 1.2vw, 1.1rem);
+      padding: clamp(0.55rem, 0.9vh, 0.8rem) 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .titem:first-child { border-top: 1px solid var(--border); }
+    .tweek {
+      font-size: var(--xs-size); font-weight: 800; color: var(--orange);
+      min-width: 2.8rem; flex-shrink: 0; padding-top: 0.1em;
+      letter-spacing: 0.04em;
+    }
+    .tdesc { font-size: var(--small-size); color: var(--text-2); line-height: 1.5; }
+    .tdesc strong { color: var(--text); }
+
+    /* ══════════════════════════════════════
+       SLIDE 8 — FLEXPRO EVIDENCE
+    ══════════════════════════════════════ */
+    .flex-hero {
+      display: flex; align-items: center;
+      gap: clamp(1rem, 2.5vw, 2.5rem);
+    }
+    .flex-stat { flex: 1; display: flex; flex-direction: column; }
+    .flex-divider { width: 1px; background: var(--border); align-self: stretch; flex-shrink: 0; }
+    .flex-arrow { font-size: clamp(1.2rem, 2.5vw, 2rem); color: var(--orange); flex-shrink: 0; }
+
+    /* Product image with fallback */
+    .product-img-wrap {
+      border-radius: 12px; overflow: hidden; border: 1px solid var(--border);
+      background: var(--bg-card-2); position: relative; flex-shrink: 0;
+    }
+    .product-img-wrap img { width: 100%; display: block; object-fit: cover; object-position: top; }
+    .product-img-caption {
+      padding: 0.4em 0.75em; font-size: var(--xs-size);
+      color: var(--text-3); font-weight: 600;
+      background: var(--bg-card); border-top: 1px solid var(--border);
+    }
+    /* Fallback when image fails */
+    .img-fallback {
+      display: none; align-items: center; justify-content: center;
+      flex-direction: column; gap: 0.5rem;
+      padding: clamp(1.5rem, 3vh, 2.5rem);
+      text-align: center;
+    }
+    .product-img-wrap.img-failed .img-fallback { display: flex; }
+    .product-img-wrap.img-failed img { display: none; }
+    .img-fallback-icon { font-size: 2rem; opacity: 0.3; }
+    .img-fallback-text { font-size: var(--xs-size); color: var(--text-3); line-height: 1.5; }
+
+    /* Checkout mockup */
+    .checkout-mock {
+      background: #0d0f14; border: 1px solid var(--orange-border);
+      border-radius: 12px; padding: clamp(0.9rem, 1.5vw, 1.3rem);
+      display: flex; flex-direction: column; gap: 0.5em;
+    }
+    .checkout-mock-badge { font-size: var(--xs-size); font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: var(--orange); }
+    .checkout-mock-hotel { font-size: var(--small-size); font-weight: 800; color: var(--text); }
+    .checkout-mock-detail { font-size: var(--xs-size); color: var(--text-2); }
+    .checkout-mock-warning { font-size: var(--xs-size); background: var(--red-dim); color: var(--red); border-radius: 5px; padding: 0.3em 0.6em; line-height: 1.4; }
+    .checkout-mock-value { font-size: var(--xs-size); color: var(--text-2); line-height: 1.4; }
+    .checkout-mock-cta { display: flex; gap: 0.5em; margin-top: 0.15em; }
+    .checkout-mock-btn {
+      flex: 1; padding: 0.45em; border-radius: 6px;
+      text-align: center; font-size: var(--xs-size); font-weight: 700;
+    }
+    .checkout-mock-btn.primary { background: var(--orange); color: white; }
+    .checkout-mock-btn.secondary { background: rgba(255,255,255,0.05); color: var(--text-3); border: 1px solid rgba(255,255,255,0.08); }
+
+    /* ══════════════════════════════════════
+       SLIDE 9 — FLEXPRO PLAN
+    ══════════════════════════════════════ */
+    .scenario-wrap {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden;
+    }
+    .scenario-table { width: 100%; border-collapse: collapse; }
+    .scenario-table th {
+      font-size: var(--xs-size); font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-3);
+      padding: 0.65em 1em; text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .scenario-table td {
+      padding: 0.75em 1em; border-bottom: 1px solid rgba(255,255,255,0.03);
+      color: var(--text-2); font-size: var(--small-size); vertical-align: middle;
+    }
+    .scenario-table tr.base-row td { color: var(--text); background: rgba(253,75,35,0.05); }
+    .scenario-table tr:last-child td { border-bottom: none; }
+    .scenario-table .gbv-val { font-weight: 900; color: var(--green); font-size: clamp(0.9rem, 1.3vw, 1.1rem); }
+
+    /* ══════════════════════════════════════
+       SLIDE 10 — ROADMAP
+    ══════════════════════════════════════ */
+    .roadmap-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--gap); flex: 1; }
+    .roadmap-col {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 14px; padding: var(--card-pad);
+      display: flex; flex-direction: column; gap: 0.8rem;
+    }
+    .rcol-tag {
+      font-size: var(--xs-size); font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.12em; padding: 0.3em 0.75em; border-radius: 5px;
+      display: inline-block; width: fit-content;
+    }
+    .rcol-q1 { background: var(--green-dim); color: var(--green); }
+    .rcol-q2 { background: var(--orange-dim); color: var(--orange); }
+    .rcol-q3 { background: var(--yellow-dim); color: var(--yellow); }
+    .rcol-title { font-size: var(--small-size); font-weight: 800; color: var(--text); line-height: 1.3; }
+    .rcol-items { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+    .rcol-item { display: flex; gap: 0.5rem; font-size: var(--xs-size); color: var(--text-2); line-height: 1.45; }
+    .rcol-item .dot-bullet { color: var(--text-3); flex-shrink: 0; }
+    .rcol-item strong { color: var(--text); }
+    .rcol-outcome { font-size: var(--xs-size); font-weight: 700; padding-top: 0.65rem; border-top: 1px solid var(--border); margin-top: auto; line-height: 1.45; }
+
+    /* ══════════════════════════════════════
+       SLIDE 11 — METRICS
+    ══════════════════════════════════════ */
+    .lever-wrap { display: flex; align-items: stretch; gap: clamp(0.6rem, 1.2vw, 1.2rem); }
+    .lever {
+      flex: 1; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 14px; padding: clamp(1.2rem, 2vw, 1.8rem);
+      display: flex; flex-direction: column; gap: 0.4rem;
+    }
+    .lever-abbr { font-size: clamp(1.5rem, 3vw, 2.3rem); font-weight: 900; line-height: 1; }
+    .lever-title { font-size: var(--small-size); font-weight: 800; margin-top: 0.2em; }
+    .lever-desc { font-size: var(--xs-size); color: var(--text-2); line-height: 1.5; flex: 1; }
+    .lever-tag-row { margin-top: 0.5em; }
+    .lever-arrow { font-size: clamp(1rem, 1.8vw, 1.4rem); color: var(--text-3); flex-shrink: 0; align-self: center; }
+    .lever-outcome {
+      background: var(--orange-dim); border: 1px solid var(--orange-border);
+      border-radius: 14px; padding: clamp(1.2rem, 2vw, 1.8rem);
+      text-align: center; flex-shrink: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 0.3rem; min-width: 7rem;
+    }
+    .lever-outcome-abbr { font-size: clamp(1.4rem, 2.5vw, 2rem); font-weight: 900; color: var(--orange); line-height: 1; }
+    .lever-outcome-label { font-size: var(--xs-size); color: var(--text-2); margin-top: 0.3em; line-height: 1.45; }
+
+    /* ══════════════════════════════════════
+       SLIDE 12 — APPENDIX
+    ══════════════════════════════════════ */
+    .appendix-block {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 14px; padding: var(--card-pad);
+      display: flex; flex-direction: column; gap: 0.6rem;
+    }
+    .appendix-block-title { font-size: var(--small-size); font-weight: 800; color: var(--orange); }
+    .appendix-table { width: 100%; border-collapse: collapse; }
+    .appendix-table th {
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--text-3); padding: 0.5em 0.85em; text-align: left;
+      border-bottom: 1px solid var(--border); font-size: var(--xs-size);
+    }
+    .appendix-table td {
+      padding: 0.6em 0.85em; border-bottom: 1px solid rgba(255,255,255,0.03);
+      color: var(--text-2); line-height: 1.5; vertical-align: top; font-size: var(--xs-size);
+    }
+    .appendix-table td:first-child { font-weight: 700; color: var(--text); white-space: nowrap; }
+    .appendix-table tr:last-child td { border-bottom: none; }
+
+    /* ── RESPONSIVE ── */
+    @media(max-height:680px){
+      :root{ --pad-v: clamp(1.2rem,2.5vh,2rem); --h2-size: clamp(1.1rem,2.2vw,1.6rem); }
+    }
+    @media(max-width:800px){
+      .slide-content.row { flex-direction: column; }
+      .market-stats { grid-template-columns: 1fr; }
+      .opp-hero { grid-template-columns: 1fr; }
+      .roadmap-cols { grid-template-columns: 1fr; }
+      .surface-grid { grid-template-columns: 1fr; }
+    }
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{ transition-duration:0.01ms!important; }
+      html{ scroll-behavior:auto; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="progress"></div>
+<nav id="navDots"></nav>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 1 — TITLE
+═══════════════════════════════════════════════════════ -->
+<section class="slide" id="s1">
+  <div class="slide-content center">
+
+    <div class="r d1" style="display:flex;align-items:center;gap:0.65rem;margin-bottom:clamp(2rem,4vh,4rem);">
+      <div style="width:clamp(28px,2.6vw,38px);height:clamp(28px,2.6vw,38px);background:var(--orange);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:clamp(0.8rem,1.4vw,1.05rem);color:white;flex-shrink:0;">E</div>
+      <span style="font-size:var(--xs-size);font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--text-2);">Engine · PM Case Study · Lodging Vertical</span>
+    </div>
+
+    <h1 class="r d2">
+      Two focused opportunities<br/>for near-term<br/><span class="org">lodging growth</span>
+    </h1>
+
+    <div class="divider r d3" style="margin-top:clamp(1rem,2vh,1.8rem);"></div>
+
+    <p class="r d4" style="font-size:var(--body-size);color:var(--text-2);max-width:50ch;margin-top:0.5rem;line-height:1.65;">
+      A strategy grounded in product data, public evidence, and what a focused team can ship in Q1.
+    </p>
+
+    <p class="r d5" style="font-size:var(--small-size);color:var(--text-3);margin-top:clamp(2rem,4vh,4rem);">
+      Akshay Sinha &nbsp;·&nbsp; Product Manager
+    </p>
+
+    <div style="position:absolute;right:var(--pad);top:50%;transform:translateY(-50%);font-size:clamp(6rem,15vw,13rem);font-weight:900;color:rgba(253,75,35,0.03);line-height:1;pointer-events:none;user-select:none;" aria-hidden="true">GBV</div>
+  </div>
+  <span class="slide-num">01 / 12</span>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 2 — ASSUMPTIONS
+═══════════════════════════════════════════════════════ -->
+<section class="slide" id="s2">
+  <div class="slide-content">
+    <div class="label r d1">Before We Begin</div>
+    <h2 class="r d2">Seven assumptions underpin every number in this presentation. Ask about any of them.</h2>
+    <div class="divider r d3"></div>
+
+    <div class="assume-list r d4">
+
+      <div class="assume-item">
+        <span class="assume-num">1</span>
+        <span class="assume-name">GBV Baseline</span>
+        <span class="assume-value">~$500M annual GBV — back-calculated from Engine's $2.1B Series C at 4-6x revenue multiples. All dollar estimates scale proportionally if this is off.</span>
+        <span class="assume-src"><a href="https://www.crunchbase.com/organization/hotel-engine" target="_blank">Crunchbase Series C</a></span>
+      </div>
+
+      <div class="assume-item">
+        <span class="assume-num">2</span>
+        <span class="assume-name">Mobile Share</span>
+        <span class="assume-value">~50% of booking sessions on mobile. Phocuswright industry norm for travel apps. Engine-specific split was requested in the clarifying email.</span>
+        <span class="assume-src"><a href="https://www.phocuswright.com" target="_blank">Phocuswright</a></span>
+      </div>
+
+      <div class="assume-item">
+        <span class="assume-num">3</span>
+        <span class="assume-name">Android Share</span>
+        <span class="assume-value">~28% of Engine mobile sessions. JAMF 2024 shows 70-74% iOS in N. American corporate. Engine's SMB booking persona skews further toward iOS.</span>
+        <span class="assume-src"><a href="https://www.jamf.com/resources/ebooks/jamf-security-360-annual-trends-report-2024/" target="_blank">JAMF 2024</a></span>
+      </div>
+
+      <div class="assume-item">
+        <span class="assume-num">4</span>
+        <span class="assume-name">Core Persona</span>
+        <span class="assume-value">Travel admin or finance manager at a 100-500 person SMB in field-heavy industries: construction, healthcare, staffing, consulting.</span>
+        <span class="assume-src"><a href="https://www.engine.com" target="_blank">engine.com</a> · G2 reviews</span>
+      </div>
+
+      <div class="assume-item">
+        <span class="assume-num">5</span>
+        <span class="assume-name">FlexPro Upsell Placement</span>
+        <span class="assume-value">FlexPro is currently surfaced at the account level. The opportunity is to move that moment to checkout, where a specific booking and its cancellation terms are in front of the user. Based on direct product audit, April 2026.</span>
+        <span class="assume-src">Product audit, Apr 2026</span>
+      </div>
+
+      <div class="assume-item">
+        <span class="assume-num">6</span>
+        <span class="assume-name">Attach Rate Movement</span>
+        <span class="assume-value">+8 pts in first A/B iteration. Contextual upsell interventions in travel and fintech typically move 8-12 points. Conservative end of range used.</span>
+        <span class="assume-src">Industry benchmarks</span>
+      </div>
+
+      <div class="assume-item">
+        <span class="assume-num">7</span>
+        <span class="assume-name">Funnel Drop-off Location</span>
+        <span class="assume-value">Largest gap at property view to booking completion — hypothesis based on Phocuswright benchmarks and public Android review signals.</span>
+        <span class="assume-src"><a href="https://www.phocuswright.com" target="_blank">Phocuswright</a> · PlanetHMS</span>
+      </div>
+
+    </div>
+
+    <p class="footnote r d5">* Engine-specific conversion data, mobile split, and repeat booking rate were all requested in the clarifying email to ProductHiring@engine.com prior to this presentation.</p>
+  </div>
+  <span class="slide-num">02 / 12</span>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 3 — MARKET
+═══════════════════════════════════════════════════════ -->
+<section class="slide" id="s3">
+  <div class="slide-content">
+    <div class="label r d1">The Market</div>
+    <h2 class="r d2">75% of SMB business travel is completely unmanaged. Engine is the only platform built for this segment at scale.</h2>
+    <div class="divider r d3"></div>
+
+    <div class="market-stats r d4">
+      <div class="market-stat">
+        <div class="stat-num org">$30B+</div>
+        <p class="stat-caption">Annual US business hotel spend happening outside any managed platform. Employees book on Expedia, use personal cards, or call hotels directly. The spend exists. The platform capture does not.</p>
+        <p class="source" style="margin-top:0.75rem;">Business Travel News · Engine market framing</p>
+      </div>
+      <div class="market-stat">
+        <div class="stat-num yel">75%</div>
+        <p class="stat-caption">Of SMB business travel is unmanaged. Enterprise tools like Concur and Amex GBT require IT, contracts, and minimum spend. Engine does not. That asymmetry is the wedge.</p>
+        <p class="source" style="margin-top:0.75rem;">Engine market positioning · BTN reporting</p>
+      </div>
+      <div class="market-stat">
+        <div class="stat-num grn">26%</div>
+        <p class="stat-caption">Average savings Engine delivers versus unmanaged booking. $202M delivered to customers in 2024. This is the economic proof point that converts a CFO and makes every booking a retention event.</p>
+        <p class="source" style="margin-top:0.75rem;"><a href="https://www.engine.com/pricing" target="_blank">engine.com/pricing</a> · <a href="https://www.businesswire.com" target="_blank">BusinessWire May 2025</a></p>
+      </div>
+    </div>
+
+    <div class="r d5" style="border-top:1px solid var(--border);padding-top:clamp(0.75rem,1.5vh,1.25rem);">
+      <p style="font-size:var(--small-size);color:var(--text-2);line-height:1.6;max-width:90ch;"><strong style="color:var(--text);">Engine's moat: rates and simplicity at SMB scale.</strong> The sweet spot is 100-500 employee companies in construction, healthcare, staffing, and consulting. Real travel volume. No formal program. Concur is too complex. Expedia has no policy layer. Engine fills the gap — 85,000+ hotels, 6 major chain partnerships, $2.1B valuation.</p>
+      <p class="source" style="margin-top:0.4rem;"><a href="https://www.crunchbase.com/organization/hotel-engine" target="_blank">Engine Series C: Crunchbase</a> · <a href="https://www.engine.com/hotel-partners" target="_blank">engine.com/hotel-partners</a></p>
+    </div>
+  </div>
+  <span class="slide-num">03 / 12</span>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 4 — MY APPROACH
+═══════════════════════════════════════════════════════ -->
+<section class="slide" id="s4">
+  <div class="slide-content">
+    <div class="label r d1">My Approach</div>
+    <h2 class="r d2">Four surfaces evaluated. Two high-confidence opportunities, both Q1 executable.</h2>
+    <div class="divider r d3"></div>
+
+    <!-- Two opportunities as the hero -->
+    <div class="opp-hero r d4">
+      <div class="opp-hero-card o1">
+        <span class="tag tag-org" style="width:fit-content;">Opportunity 1 &nbsp;·&nbsp; P0</span>
+        <div class="opp-title">Android Parity Sprint</div>
+        <div class="opp-desc">Android app is 3.6 vs iOS 4.7. Documented auth failures and missing cancel buttons are blocking bookings already in the funnel. A 4-week sprint closes that gap.</div>
+        <div class="opp-gbv org">$8–10M <span style="font-size:var(--small-size);color:var(--text-2);font-weight:600;">GBV recovery</span></div>
+      </div>
+      <div class="opp-hero-card o2">
+        <span class="tag tag-yel" style="width:fit-content;">Opportunity 2 &nbsp;·&nbsp; P1</span>
+        <div class="opp-title">FlexPro Contextual Upsell</div>
+        <div class="opp-desc">40% of bookings are FlexPro but represent 70% of GBV. FlexPro users spend 1.75x more. A contextual checkout trigger, not a generic banner, moves the attach rate.</div>
+        <div class="opp-gbv yel">$19–45M <span style="font-size:var(--small-size);color:var(--text-2);font-weight:600;">GBV range</span></div>
+      </div>
+    </div>
+
+    <!-- Four surfaces as support -->
+    <div class="r d5" style="border-top:1px solid var(--border);padding-top:clamp(0.6rem,1.2vh,1rem);">
+      <p class="label" style="margin-bottom:0.6rem;">What I evaluated</p>
+      <div class="surface-grid">
+        <div class="surface-item">
+          <span class="surface-num">1</span>
+          <span class="surface-text"><strong>Search and discovery</strong> — filter logic, sort relevance, time to first result</span>
+        </div>
+        <div class="surface-item">
+          <span class="surface-num">2</span>
+          <span class="surface-text"><strong>Booking and checkout</strong> — steps to complete, FlexPro placement, payment friction</span>
+        </div>
+        <div class="surface-item">
+          <span class="surface-num">3</span>
+          <span class="surface-text"><strong>Post-booking experience</strong> — modification UX, cancellation clarity, billing self-serve</span>
+        </div>
+        <div class="surface-item">
+          <span class="surface-num">4</span>
+          <span class="surface-text"><strong>Mobile parity</strong> — iOS vs. Android feature gap, completion rate signals, public reviews</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="footnote r d6">* AI-powered discovery (P2) and group booking (P3) are real opportunities. Evidence is thinner and timelines longer. Both appear in the Q2/Q3 roadmap.</p>
+  </div>
+  <span class="slide-num">04 / 12</span>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 5 — FUNNEL
+═══════════════════════════════════════════════════════ -->
+<section class="slide" id="s5">
+  <div class="slide-content" style="justify-content:center;">
+    <div class="label r d1">The Booking Funnel</div>
+    <h2 class="r d2">Both opportunities operate where the transaction is already in progress — not at the top of the funnel.</h2>
+    <div class="divider r d3"></div>
+
+    <div class="funnel-wrap r d4" id="funnel" style="align-items:flex-end;">
+      <div class="fstage">
+        <div class="fbar" style="height:clamp(130px,23vh,190px);background:linear-gradient(135deg,#fd4b23,#ff7050);">100%</div>
+        <div class="flabel">Search<br/>Session</div>
+      </div>
+      <div class="farrow">&#8594;</div>
+      <div class="fstage">
+        <div class="fbar" style="height:clamp(95px,17vh,140px);background:#c93d1d;">~65%</div>
+        <div class="flabel">Views a<br/>Property</div>
+      </div>
+      <div class="farrow">&#8594;</div>
+      <div class="fstage">
+        <div class="fbadge fbadge-org">OPPORTUNITY 1</div>
+        <div class="fbar" style="height:clamp(64px,11.5vh,95px);background:#7c2d12;">~35%</div>
+        <div class="flabel">Starts<br/>Checkout</div>
+      </div>
+      <div class="farrow">&#8594;</div>
+      <div class="fstage">
+        <div class="fbadge fbadge-yel">OPPORTUNITY 2</div>
+        <div class="fbar" style="height:clamp(44px,8vh,66px);background:#991b1b;">~20%</div>
+        <div class="flabel">Completes<br/>Booking</div>
+      </div>
+      <div class="farrow">&#8594;</div>
+      <div class="fstage">
+        <div class="fbar" style="height:clamp(30px,5.5vh,46px);background:var(--green);">~14%</div>
+        <div class="flabel">Books<br/>Again</div>
+      </div>
+    </div>
+
+    <p class="footnote r d5">* Percentages are industry-standard hypotheses from Phocuswright and PlanetHMS hotel booking benchmarks, not Engine's confirmed conversion data. See <a href="#s2">Slide 2</a> for assumption basis.</p>
+  </div>
+  <span class="slide-num">05 / 12</span>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 6 — OPPORTUNITY 1: EVIDENCE
+═══════════════════════════════════════════════════════ -->
+<section class="slide" id="s6">
+  <div class="slide-content row">
+    <div class="col">
+      <div class="label r d1">Opportunity 1 of 2</div>
+      <h2 class="r d2">Android Parity: The Android experience hasn't kept pace with iOS</h2>
+      <div class="divider r d2"></div>
+
+      <!-- Hero: rating numbers -->
+      <div class="rating-hero r d3">
+        <div>
+          <div class="rating-num" style="color:var(--red);">3.6</div>
+          <div style="font-size:var(--xs-size);color:var(--text-3);margin-top:0.25em;"><a href="https://play.google.com/store/apps/details?id=com.hotelengine.app" target="_blank" style="color:var(--text-3);text-decoration:underline;">Google Play · 523 reviews</a></div>
+        </div>
+        <div class="rating-vs">vs</div>
+        <div>
+          <div class="rating-num" style="color:var(--green);">4.7</div>
+          <div style="font-size:var(--xs-size);color:var(--text-3);margin-top:0.25em;"><a href="https://apps.apple.com/us/app/engine/id1437724157" target="_blank" style="color:var(--text-3);text-decoration:underline;">App Store · 3,008 reviews</a></div>
+        </div>
+        <div class="rating-gap">
+          <div class="rating-gap-num">1.1★</div>
+          <div style="font-size:var(--xs-size);color:var(--text-2);margin-top:0.2em;">platform gap</div>
+        </div>
+      </div>
+
+      <p class="r d3" style="font-size:var(--small-size);color:var(--text-2);line-height:1.6;">Reviews document transactional failures, not aesthetic complaints: auth loops post-login-update, booking completion disappearing mid-flow, cancellation button missing on Android.</p>
+
+      <!-- Reviews -->
+      <div class="blist r d4" style="gap:0.7rem;">
+        <div class="review-card">
+          <div class="review-stars">&#9733;&#9733;&#9734;&#9734;&#9734; <span style="color:var(--text-3);">· 4 months ago</span></div>
+          <div class="review-text">"After their last update, I get stuck in a login loop every time I try to book on Android. Works fine on my colleague's iPhone."</div>
+          <div class="review-meta">Auth failure loop · Google Play</div>
+        </div>
+        <div class="review-card">
+          <div class="review-stars">&#9733;&#9734;&#9734;&#9734;&#9734; <span style="color:var(--text-3);">· 6 months ago</span></div>
+          <div class="review-text">"No way to cancel a reservation in the app anymore. Had to call the hotel directly. The iPhone version doesn't have this problem."</div>
+          <div class="review-meta">Missing cancel button · Google Play</div>
+        </div>
+        <div class="review-card">
+          <div class="review-stars">&#9733;&#9733;&#9734;&#9734;&#9734; <span style="color:var(--text-3);">· 3 months ago</span></div>
+          <div class="review-text">"Hit confirm and the booking just vanished. Happened twice. Our whole field team uses Android and we can't trust it for travel."</div>
+          <div class="review-meta">Booking completion failure · Google Play</div>
+        </div>
+      </div>
+
+      <p class="footnote r d4">* Paraphrased from documented Google Play review patterns. <a href="https://play.google.com/store/apps/details?id=com.hotelengine.app" target="_blank">Verify at Google Play</a></p>
+    </div>
+
+    <div class="col">
+      <h2 class="r d2" style="font-size:clamp(1rem,1.9vw,1.5rem);color:var(--text-2);font-weight:600;font-style:italic;">"A user who cannot complete a booking on Android does not retry on Android. They book on a personal card or with a competitor."</h2>
+      <div class="divider r d2"></div>
+
+      <div class="r d3">
+        <p style="font-size:var(--small-size);font-weight:800;margin-bottom:0.6rem;">Why Android matters for Engine specifically</p>
+        <div class="blist">
+          <div class="bitem"><span class="bullet">·</span><span>US enterprise device split: ~70-74% iOS in corporate environments (JAMF 2024)</span></div>
+          <div class="bitem"><span class="bullet">·</span><span>Engine's booking persona skews even further toward iOS — leaving ~28% Android</span></div>
+          <div class="bitem"><span class="bullet">·</span><span>Field workers in construction and healthcare who book from Android are a growing sub-segment among the hardest to retain</span></div>
+        </div>
+      </div>
+
+      <div class="r d4" style="border-left:3px solid var(--red);padding-left:clamp(0.75rem,1.2vw,1rem);">
+        <p style="font-size:var(--small-size);font-weight:800;margin-bottom:0.5rem;">How it compounds</p>
+        <div class="blist">
+          <div class="bitem"><span class="bullet">1</span><span>Transaction abandoned: no GBV recovered from that session</span></div>
+          <div class="bitem"><span class="bullet">2</span><span>Platform trust erodes: lower probability of the next Android session</span></div>
+          <div class="bitem"><span class="bullet">3</span><span>Admin reverts company to unmanaged booking: loss scales across the account</span></div>
+          <div class="bitem"><span class="bullet">4</span><span>Public review posted: acquisition cost rises for all future Android users</span></div>
+        </div>
+      </div>
+
+      <div class="card card-green r d5">
+        <p style="font-size:var(--small-size);color:var(--text-2);line-height:1.5;">Industry top-tier search-to-booking conversion: <strong style="color:var(--text);">5.5%+</strong>. The gap between Engine's estimated Android completion rate and this ceiling is where Opportunity 1 operates.</p>
+        <p class="source" style="margin-top:0.35rem;"><a href="https://www.phocuswright.com" target="_blank">Phocuswright</a> / PlanetHMS benchmarks</p>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">06 / 12</span>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 7 — OPPORTUNITY 1: PLAN
+═══════════════════════════════════════════════════════ -->
+<section class="slide" id="s7">
+  <div class="slide-content row">
+    <div class="col">
+      <div class="label r d1">Opportunity 1: Android Parity</div>
+      <h2 class="r d2">A 4-week sprint restores the booking completion floor on Android</h2>
+      <div class="divider r d2"></div>
+
+      <div class="r d3">
+        <p style="font-size:var(--small-size);font-weight:800;margin-bottom:0.65rem;">The sprint</p>
+        <div class="timeline">
+          <div class="titem">
+            <span class="tweek">Wk 1</span>
+            <span class="tdesc"><strong>Auth and session persistence fix</strong> — resolve documented login-loop failures. Week 1 includes a technical spike to scope infrastructure vs. session layer root cause before committing.</span>
+          </div>
+          <div class="titem">
+            <span class="tweek">Wk 2</span>
+            <span class="tdesc"><strong>Booking completion QA parity</strong> — full regression across Android API levels to match iOS behavior at checkout. Beta: 15% of Android users.</span>
+          </div>
+          <div class="titem">
+            <span class="tweek">Wk 3</span>
+            <span class="tdesc"><strong>Self-serve cancellation restored</strong> — missing cancel button on Android, documented publicly. Push notification parity. Beta expands to 50%.</span>
+          </div>
+          <div class="titem">
+            <span class="tweek">Wk 4</span>
+            <span class="tdesc"><strong>Full rollout.</strong> Monitor completion rate and crash rate daily. Auth error rate should drop to near-zero within 48 hours of release.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="r d4" style="border-left:3px solid var(--green);padding-left:clamp(0.75rem,1.2vw,1rem);">
+        <p style="font-size:var(--small-size);font-weight:800;margin-bottom:0.45rem;">Success criteria</p>
+        <div class="blist">
+          <div class="bitem"><span class="bullet">1</span><span><strong>Primary:</strong> Android booking completion rate delta vs. iOS narrows to under 5%</span></div>
+          <div class="bitem"><span class="bullet">2</span><span><strong>Secondary:</strong> Overall mobile conversion rate improves by at least 2 percentage points</span></div>
+          <div class="bitem"><span class="bullet">&#9642;</span><span><strong>Leading signal:</strong> Auth error rate drops to near-zero within 48 hrs of release</span></div>
+        </div>
+        <p class="footnote" style="margin-top:0.5em;">* Statistical power calculation: see <a href="#s12">Appendix, Slide 12</a>.</p>
+      </div>
+
+      <p class="footnote r d5">* 4-week timeline reflects AI-assisted development tooling (Copilot, Cursor, 2026). Week 5 is a monitoring period, not sprint scope.</p>
+    </div>
+
+    <div class="col" style="max-width:40%;">
+      <div class="label r d1" style="visibility:hidden;">.</div>
+      <h2 class="r d2" style="font-size:clamp(1rem,1.9vw,1.5rem);color:var(--text-2);font-weight:600;">The GBV estimate</h2>
+      <div class="divider r d2"></div>
+
+      <!-- GBV as hero stat -->
+      <div class="r d3" style="text-align:center;padding:clamp(1.5rem,2.5vh,2.5rem) 0;">
+        <div style="font-size:clamp(3.5rem,7vw,5.5rem);font-weight:900;color:var(--green);line-height:1;letter-spacing:-0.03em;">$8-10M</div>
+        <div style="font-size:var(--small-size);color:var(--text-2);margin-top:0.4rem;">Near-term GBV recovery. Conservative estimate.</div>
+      </div>
+
+      <div class="r d4">
+        <p style="font-size:var(--small-size);font-weight:800;margin-bottom:0.5rem;">How we get there</p>
+        <div class="blist">
+          <div class="bitem"><span class="bullet">·</span><span>GBV baseline: ~$500M <span class="muted">(Slide 2)</span></span></div>
+          <div class="bitem"><span class="bullet">×</span><span>Mobile share: ~50% <span class="muted">(Phocuswright)</span></span></div>
+          <div class="bitem"><span class="bullet">×</span><span>Android share: ~28% <span class="muted">(JAMF 2024)</span></span></div>
+          <div class="bitem"><span class="bullet">×</span><span>Recoverable gap: ~12% <span class="muted">(conservative)</span></span></div>
+          <div class="bitem" style="padding-top:0.3rem;border-top:1px solid var(--border);margin-top:0.2rem;"><span class="bullet">=</span><span style="color:var(--text);font-weight:700;">$500M × 50% × 28% × 12% = $8.4M</span></div>
+        </div>
+      </div>
+
+      <div class="r d5" style="border-top:1px solid var(--border);padding-top:0.75rem;">
+        <p style="font-size:var(--xs-size);color:var(--text-3);line-height:1.5;"><span style="color:var(--yellow);font-weight:700;">Sensitivity:</span> At $300M actual GBV, drops to ~$5M. At $700M, rises to ~$12M. The mechanism is valid regardless of baseline.</p>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">07 / 12</span>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 8 — OPPORTUNITY 2: EVIDENCE
+═══════════════════════════════════════════════════════ -->
+<section class="slide" id="s8">
+  <div class="slide-content row">
+    <div class="col">
+      <div class="label r d1">Opportunity 2 of 2</div>
+      <h2 class="r d2">FlexPro Contextual Upsell: The 40/70 ratio reveals where our highest-value customers are</h2>
+      <div class="divider r d2"></div>
+
+      <!-- Hero: three stats in a row -->
+      <div class="flex-hero r d3">
+        <div class="flex-stat">
+          <div class="stat-num org">40%</div>
+          <p class="stat-caption">of bookings<br/>use FlexPro</p>
+        </div>
+        <div class="flex-arrow">&#8594;</div>
+        <div class="flex-stat">
+          <div class="stat-num yel">70%</div>
+          <p class="stat-caption">of GBV comes<br/>from those bookings</p>
+        </div>
+        <div class="flex-divider"></div>
+        <div class="flex-stat">
+          <div class="stat-num" style="color:var(--text);">1.75×</div>
+          <p class="stat-caption">spend multiplier<br/>vs. non-FlexPro</p>
+        </div>
+      </div>
+      <p class="source r d3"><a href="https://www.businesswire.com" target="_blank">Engine press release, BusinessWire May 2025</a> — "Customers Save Over $202M with Flex and FlexPro"</p>
+
+      <div class="r d4">
+        <p style="font-size:var(--small-size);font-weight:800;margin-bottom:0.55rem;">What this ratio reveals</p>
+        <div class="blist">
+          <div class="bitem"><span class="bullet">·</span><span>FlexPro users book higher <strong>ADR (Average Daily Rate)</strong> properties more often and with more confidence</span></div>
+          <div class="bitem"><span class="bullet">·</span><span>FlexPro is $200/month for company-wide free cancellation and modification. The ROI is clear to finance teams.</span></div>
+          <div class="bitem"><span class="bullet">·</span><span>The question is not whether to grow FlexPro. The question is: are we presenting it at the moment of maximum intent?</span></div>
+        </div>
+      </div>
+
+      <div class="r d5" style="border-left:3px solid var(--text-3);padding-left:clamp(0.75rem,1.2vw,1rem);">
+        <p style="font-size:var(--xs-size);font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.3em;">Where the opportunity lives</p>
+        <p style="font-size:var(--small-size);color:var(--text-2);line-height:1.55;">FlexPro is currently presented at the account level, before any specific booking is in progress. Moving this moment to checkout — where a user is already committed to a property and its cancellation terms — is where the contextual prompt converts.</p>
+      </div>
+    </div>
+
+    <div class="col" style="max-width:42%;">
+      <div class="label r d1" style="visibility:hidden;">.</div>
+      <h2 class="r d2" style="font-size:clamp(0.95rem,1.8vw,1.4rem);color:var(--text-2);font-weight:600;">The 1.75x multiplier is the signal. The opportunity: surface FlexPro where intent is highest.</h2>
+      <div class="divider r d2"></div>
+
+      <!-- Current state: styled rendering of account-level prompt -->
+      <div class="r d3" style="background:var(--bg-card-2);border:1px solid var(--border);border-radius:12px;padding:clamp(0.9rem,1.5vw,1.3rem);display:flex;flex-direction:column;gap:0.6em;">
+        <div style="font-size:var(--xs-size);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-3);">Current state · Account settings</div>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div style="width:2.2rem;height:2.2rem;background:var(--orange-dim);border:1px solid var(--orange-border);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:0.62rem;font-weight:900;color:var(--orange);flex-shrink:0;">FP</div>
+          <div>
+            <div style="font-size:var(--small-size);font-weight:800;color:var(--text);">FlexPro</div>
+            <div style="font-size:var(--xs-size);color:var(--text-2);">Free cancellation &amp; modification · Company-wide</div>
+          </div>
+          <div style="margin-left:auto;font-size:var(--small-size);font-weight:800;color:var(--orange);">$200/mo</div>
+        </div>
+        <div style="font-size:var(--xs-size);color:var(--text-2);line-height:1.5;padding:0.5em 0.7em;background:rgba(255,255,255,0.03);border-radius:6px;border:1px solid var(--border);">Upgrade your account to FlexPro for free cancellation on all future bookings.</div>
+        <div style="display:flex;gap:0.5em;">
+          <div style="flex:1;padding:0.42em;background:var(--orange);border-radius:5px;text-align:center;font-size:var(--xs-size);font-weight:700;color:white;">Upgrade to FlexPro</div>
+          <div style="flex:1;padding:0.42em;background:rgba(255,255,255,0.04);border-radius:5px;text-align:center;font-size:var(--xs-size);font-weight:700;color:var(--text-3);border:1px solid var(--border);">Maybe later</div>
+        </div>
+      </div>
+
+      <p class="r d4" style="font-size:var(--xs-size);font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:0.1em;">Proposed: contextual checkout trigger</p>
+
+      <div class="checkout-mock r d4">
+        <div class="checkout-mock-badge">Protect this booking</div>
+        <div class="checkout-mock-hotel">Grand Hyatt Denver</div>
+        <div class="checkout-mock-detail">Nov 12-14 · 2 nights · $247/night · Subtotal: $494</div>
+        <div class="checkout-mock-warning">This property has a strict 48-hour cancellation policy. Missed window means no refund.</div>
+        <div class="checkout-mock-value">Add FlexPro: cancel or modify any time, no fees. $200/month, company-wide.</div>
+        <div class="checkout-mock-cta">
+          <div class="checkout-mock-btn primary">Add FlexPro</div>
+          <div class="checkout-mock-btn secondary">Skip for now</div>
+        </div>
+      </div>
+
+      <div class="r d5" style="border-top:1px solid var(--border);padding-top:0.65rem;">
+        <p style="font-size:var(--xs-size);color:var(--text-2);line-height:1.5;">The cost and benefit are concrete and immediate. The user is already in maximum intent mode. That is exactly when a contextual prompt converts.</p>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">08 / 12</span>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 9 — OPPORTUNITY 2: PLAN
+═══════════════════════════════════════════════════════ -->
+<section class="slide" id="s9">
+  <div class="slide-content row">
+    <div class="col">
+      <div class="label r d1">Opportunity 2: FlexPro Contextual Upsell</div>
+      <h2 class="r d2">Present at the moment of maximum intent: leading indicators let us call the test in 3-4 weeks</h2>
+      <div class="divider r d2"></div>
+
+      <div class="r d3">
+        <p style="font-size:var(--small-size);font-weight:800;margin-bottom:0.65rem;">What we build (weeks 1-2)</p>
+        <div class="blist">
+          <div class="bitem"><span class="bullet">1</span><span><strong>Contextual trigger logic</strong> — surface FlexPro at checkout, tied to the specific property's cancellation policy</span></div>
+          <div class="bitem"><span class="bullet">2</span><span><strong>Dynamic copy</strong> — show FlexPro cost in terms of this booking, not the monthly subscription</span></div>
+          <div class="bitem"><span class="bullet">3</span><span><strong>A/B infrastructure</strong> — 50/50 split: contextual prompt vs. current generic banner</span></div>
+        </div>
+      </div>
+
+      <div class="r d4">
+        <p style="font-size:var(--small-size);font-weight:800;margin-bottom:0.55rem;">Leading indicators for an early call (weeks 3-4)</p>
+        <div class="timeline">
+          <div class="titem">
+            <span class="tweek">Wk 1</span>
+            <span class="tdesc"><strong>Prompt CTR:</strong> does contextual placement drive more engagement than the generic banner?</span>
+          </div>
+          <div class="titem">
+            <span class="tweek">Wk 2</span>
+            <span class="tdesc"><strong>Acceptance rate:</strong> of users who engage with the prompt, what share add FlexPro?</span>
+          </div>
+          <div class="titem">
+            <span class="tweek">Wk 3-4</span>
+            <span class="tdesc"><strong>Attach rate delta:</strong> treatment vs. control. If +2pts in treatment, the mechanism is valid.</span>
+          </div>
+        </div>
+        <p style="font-size:var(--small-size);font-weight:700;color:var(--green);margin-top:0.6rem;">If W1 CTR and W2 acceptance are both directionally positive, we can call mechanism validity at week 3-4, not week 8.</p>
+      </div>
+
+      <div class="r d5" style="border-top:1px solid var(--border);padding-top:0.65rem;">
+        <p style="font-size:var(--xs-size);color:var(--text-2);line-height:1.5;"><strong style="color:var(--text);">Data cuts to analyze:</strong> by booking value (does it work better for ADR &gt;$200/night?), user type (first-time vs. returning), cancellation policy strictness (does a strict property drive higher acceptance?).</p>
+      </div>
+    </div>
+
+    <div class="col" style="max-width:42%;">
+      <div class="label r d1" style="visibility:hidden;">.</div>
+      <h2 class="r d2" style="font-size:clamp(1rem,1.9vw,1.5rem);color:var(--text-2);font-weight:600;">GBV impact by scenario</h2>
+      <div class="divider r d2"></div>
+
+      <!-- Scenario table as hero -->
+      <div class="scenario-wrap r d3">
+        <table class="scenario-table">
+          <thead>
+            <tr><th>Scenario</th><th>Attach Move</th><th>New Rate</th><th>GBV Impact</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Conservative</td><td>+5 pts</td><td>45%</td><td class="gbv-val">+$19M</td>
+            </tr>
+            <tr class="base-row">
+              <td><strong>Base case</strong></td><td>+8 pts</td><td>48%</td><td class="gbv-val">+$30M</td>
+            </tr>
+            <tr>
+              <td>Upside</td><td>+12 pts</td><td>52%</td><td class="gbv-val">+$45M</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="footnote r d3">* $500M GBV baseline · Formula: $500M × attach_delta% × 0.75 = impact · See <a href="#s2">Slide 2</a> for assumption basis · <a href="#s12">Appendix</a> for test math.</p>
+
+      <!-- Combined estimate -->
+      <div class="card card-orange r d4">
+        <p style="font-size:var(--small-size);font-weight:800;margin-bottom:0.4rem;">Combined with Opportunity 1</p>
+        <p style="font-size:var(--small-size);color:var(--text-2);line-height:1.55;margin-bottom:0.5rem;">Android-recovered sessions enter the FlexPro upsell funnel. Opportunities are not fully independent. Co-variance discount applied: 15%.</p>
+        <div style="font-size:clamp(1.3rem,2.5vw,2rem);font-weight:900;color:var(--orange);">$30-35M combined</div>
+        <div style="font-size:var(--xs-size);color:var(--text-2);">Realistic near-term GBV, both opportunities concurrent</div>
+      </div>
+
+      <div class="r d5" style="border-left:3px solid var(--red);padding-left:clamp(0.75rem,1.2vw,1rem);">
+        <p style="font-size:var(--xs-size);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--red);margin-bottom:0.25em;">Guardrail</p>
+        <p style="font-size:var(--small-size);color:var(--text-2);">Track FlexPro attach rate and cancellation rate simultaneously from day one. If attach rises but cancel rate rises too, the prompt is attracting the wrong bookings.</p>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">09 / 12</span>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 10 — ROADMAP
+═══════════════════════════════════════════════════════ -->
+<section class="slide" id="s10">
+  <div class="slide-content">
+    <div class="label r d1">Roadmap</div>
+    <h2 class="r d2">Two opportunities run concurrently in Q1. Q2 and beyond build on what we learn.</h2>
+    <div class="divider r d3"></div>
+
+    <div class="roadmap-cols r d4">
+      <div class="roadmap-col">
+        <div class="rcol-tag rcol-q1">Q1 · Weeks 1-8</div>
+        <div class="rcol-title">Both opportunities in parallel</div>
+        <div class="rcol-items">
+          <div class="rcol-item"><span class="dot-bullet">·</span><span><strong>Android Parity Sprint</strong> (2 engineers, 4 weeks) — auth fix, booking completion, cancel button, push parity</span></div>
+          <div class="rcol-item"><span class="dot-bullet">·</span><span><strong>FlexPro Contextual Upsell A/B</strong> (1 engineer, 2-week build + 3-4 week test) — concurrent with Android sprint</span></div>
+          <div class="rcol-item"><span class="dot-bullet">·</span><span>Independent workstreams, different skills, no sequencing dependency</span></div>
+          <div class="rcol-item"><span class="dot-bullet">·</span><span>Leading indicators reviewed at week 3 for early call on FlexPro test</span></div>
+        </div>
+        <div class="rcol-outcome grn">Target: $30-35M combined GBV · Android delta closes to &lt;5% vs iOS · FlexPro attach moves +2pts min in test arm</div>
+      </div>
+
+      <div class="roadmap-col">
+        <div class="rcol-tag rcol-q2">Q2 · Days 60-120</div>
+        <div class="rcol-title">Build on Q1 signal</div>
+        <div class="rcol-items">
+          <div class="rcol-item"><span class="dot-bullet">·</span><span><strong>FlexPro iteration:</strong> If A/B succeeds, scale and test contextual copy variants by booking value tier and property type</span></div>
+          <div class="rcol-item"><span class="dot-bullet">·</span><span><strong>Business Value Score:</strong> rules-based property ranking by proximity, cancellation policy, review score — shadow-ranked 30 days before traffic exposure</span></div>
+          <div class="rcol-item"><span class="dot-bullet">·</span><span>Post-booking modification UX quick wins from Q1 audit findings</span></div>
+        </div>
+        <div class="rcol-outcome org">Target: Repeat booking rate +10% · ADR per booking +5-8%</div>
+      </div>
+
+      <div class="roadmap-col">
+        <div class="rcol-tag rcol-q3">Q3-Q4 · 120+ Days</div>
+        <div class="rcol-title">Longer-horizon opportunities</div>
+        <div class="rcol-items">
+          <div class="rcol-item"><span class="dot-bullet">·</span><span><strong>Group Booking v2:</strong> room block management, bulk invoice, coordinator dashboard — highest AOV category, worst experience today</span></div>
+          <div class="rcol-item"><span class="dot-bullet">·</span><span><strong>ML ranking:</strong> graduate from rules-based sort to ML relevance once behavioral signal from Q2 is established</span></div>
+          <div class="rcol-item"><span class="dot-bullet">·</span><span>Engine X card rewards surfaced at checkout — card behavioral data feeds lodging recommendations</span></div>
+        </div>
+        <div class="rcol-outcome yel">Target: Group GBV doubles · ML ADR exceeds rules-based baseline before ramp</div>
+      </div>
+    </div>
+
+    <div class="r d5" style="border-top:1px solid var(--border);padding-top:clamp(0.6rem,1.2vh,1rem);">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);">
+        <div>
+          <p style="font-size:var(--xs-size);font-weight:800;color:var(--text);margin-bottom:0.25rem;">Why Q1 work is durable regardless of macro</p>
+          <p style="font-size:var(--xs-size);color:var(--text-2);line-height:1.5;">Conversion-focused, not acquisition-dependent. Recovers GBV from sessions already in the funnel. A business travel slowdown reduces top-of-funnel volume but conversion improvements compound on whatever traffic exists.</p>
+        </div>
+        <div>
+          <p style="font-size:var(--xs-size);font-weight:800;color:var(--text);margin-bottom:0.25rem;">Biggest sequencing risk</p>
+          <p style="font-size:var(--xs-size);color:var(--text-2);line-height:1.5;">Android auth fix may be deeper than 4 weeks if rooted in shared infrastructure. Mitigation: Week 1 technical spike scopes root cause before engineering commits to the full sprint.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-num">10 / 12</span>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 11 — METRICS + CLOSE
+═══════════════════════════════════════════════════════ -->
+<section class="slide" id="s11">
+  <div class="slide-content">
+    <div class="label r d1">How We Know It's Working</div>
+    <h2 class="r d2">Three levers. One north star. No guessing required.</h2>
+    <div class="divider r d3"></div>
+
+    <div class="lever-wrap r d4">
+      <div class="lever">
+        <div class="lever-abbr org">CVR</div>
+        <div class="lever-title">Mobile booking completion rate</div>
+        <div class="lever-desc">More sessions convert to completed bookings. Primary signal for Opportunity 1. Measured daily by platform: iOS vs. Android delta closes over time.</div>
+        <div class="lever-tag-row"><span class="tag tag-org">Opportunity 1 signal</span></div>
+      </div>
+      <div class="lever-arrow">&#8594;</div>
+      <div class="lever">
+        <div class="lever-abbr yel">ATR</div>
+        <div class="lever-title">FlexPro attach rate at checkout</div>
+        <div class="lever-desc">Each completed booking is worth more. Primary signal for Opportunity 2. Tracked alongside cancellation rate from day one of the A/B test.</div>
+        <div class="lever-tag-row"><span class="tag tag-yel">Opportunity 2 signal</span></div>
+      </div>
+      <div class="lever-arrow">&#8594;</div>
+      <div class="lever">
+        <div class="lever-abbr" style="color:var(--text-2);">RET</div>
+        <div class="lever-title">90-day repeat booking rate</div>
+        <div class="lever-desc">Users return without acquisition cost. The compounding signal. If it rises, both opportunities are building long-term LTV, not just one-time GBV.</div>
+        <div class="lever-tag-row"><span class="tag" style="background:rgba(255,255,255,0.05);color:var(--text-2);border:1px solid var(--border);">Retention signal</span></div>
+      </div>
+      <div class="lever-arrow">&#8594;</div>
+      <div class="lever-outcome">
+        <div class="lever-outcome-abbr">GBV</div>
+        <div class="lever-outcome-label">Lodging GBV<br/>North star</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:var(--gap);" class="r d5">
+      <div style="flex:1;border-left:3px solid var(--red);padding-left:clamp(0.75rem,1.2vw,1rem);">
+        <p style="font-size:var(--xs-size);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--red);margin-bottom:0.2em;">Guardrail</p>
+        <p style="font-size:var(--small-size);color:var(--text-2);">Support tickets per booking must not rise as we speed up checkout. An uptick signals confusion, not clarity.</p>
+      </div>
+      <div style="flex:1;border-left:3px solid var(--red);padding-left:clamp(0.75rem,1.2vw,1rem);">
+        <p style="font-size:var(--xs-size);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--red);margin-bottom:0.2em;">Guardrail</p>
+        <p style="font-size:var(--small-size);color:var(--text-2);">Cancellation rate must not worsen with the FlexPro push. Track attach rate and cancel rate together from day one.</p>
+      </div>
+    </div>
+
+    <div class="r d6" style="margin-top:auto;padding-top:clamp(1rem,2vh,1.8rem);text-align:center;border-top:1px solid var(--border);">
+      <div style="font-size:clamp(1.2rem,2.5vw,2rem);font-weight:900;line-height:1.3;">
+        Fix the conversion floor. Make FlexPro contextual.<br/>
+        <span class="org">That is the Q1 plan.</span>
+      </div>
+      <div style="margin-top:clamp(0.75rem,1.5vh,1.25rem);font-size:clamp(1rem,1.8vw,1.4rem);font-weight:700;color:var(--text-3);">Thank you. Questions?</div>
+    </div>
+  </div>
+  <span class="slide-num">11 / 12</span>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SLIDE 12 — APPENDIX: AB TEST MATH
+═══════════════════════════════════════════════════════ -->
+<section class="slide" id="s12">
+  <div class="slide-content">
+    <div class="label r d1">Appendix</div>
+    <h2 class="r d2">Statistical Power and Test Duration</h2>
+    <div class="divider r d3"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);flex:1;" class="r d4">
+      <div class="appendix-block">
+        <div class="appendix-block-title">Opportunity 1: Android Parity</div>
+        <p style="font-size:var(--xs-size);color:var(--text-2);line-height:1.5;margin-bottom:0.5rem;">Intentionally not a traditional A/B test. A holdback group would mean continuing to expose half of Android users to a broken booking experience. iOS behavior serves as the natural control: we measure Android completion rate before vs. after release, with iOS as the stable comparison baseline.</p>
+        <table class="appendix-table">
+          <thead><tr><th>Variable</th><th>Value</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>Measurement approach</td><td>Observational (pre/post)</td><td>iOS completion rate = baseline control</td></tr>
+            <tr><td>Primary metric</td><td>Android completion rate</td><td>Target: within 5% of iOS rate</td></tr>
+            <tr><td>Min detectable effect</td><td>2 ppt improvement</td><td>Alpha 0.05, power 0.80</td></tr>
+            <tr><td>Required sample</td><td>~2,400 Android sessions</td><td>Standard normal approximation</td></tr>
+            <tr><td>Estimated read time</td><td>5-7 days post-release</td><td>If 500+ daily Android sessions</td></tr>
+            <tr><td>Leading signal (Day 1-3)</td><td>Auth error rate → ~0</td><td>Crash monitoring, not statistical test</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="appendix-block">
+        <div class="appendix-block-title">Opportunity 2: FlexPro Contextual Upsell</div>
+        <p style="font-size:var(--xs-size);color:var(--text-2);line-height:1.5;margin-bottom:0.5rem;">True A/B test. 50/50 split at checkout. Primary metric: FlexPro attach rate. Guardrail: cancellation rate. Early call via leading indicators reduces test duration.</p>
+        <table class="appendix-table">
+          <thead><tr><th>Variable</th><th>Value</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>Baseline attach rate</td><td>40%</td><td>Engine confirmed (BusinessWire May 2025)</td></tr>
+            <tr><td>Min detectable effect</td><td>+2 ppt</td><td>Conservative threshold for mechanism validation</td></tr>
+            <tr><td>Required sample (per arm)</td><td>~3,800 checkout sessions</td><td>Alpha 0.05, power 0.80 (two-proportion z-test)</td></tr>
+            <tr><td>Total sessions required</td><td>~7,600 checkout sessions</td><td>Both arms combined</td></tr>
+            <tr><td>Estimated full test duration</td><td>5-6 weeks</td><td>At 200+ daily checkout sessions</td></tr>
+            <tr><td>Early call possible</td><td>Week 3-4</td><td>If CTR (W1) + acceptance (W2) both directional</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:var(--xs-size);color:var(--text-3);margin-top:0.5em;font-style:italic;">Formula: n = (z_α/2 + z_β)² × [p1(1-p1) + p2(1-p2)] / (p2-p1)² where p1=0.40, p2=0.42</p>
+      </div>
+    </div>
+
+    <div class="card r d5" style="background:var(--bg-card-2);">
+      <p style="font-size:var(--xs-size);color:var(--text-2);line-height:1.5;"><strong style="color:var(--text);">Note on early stopping:</strong> Using leading indicators to call a test early introduces the multiple comparisons problem. Apply sequential testing or Bayesian monitoring rather than fixed-horizon significance testing. Standard on modern A/B platforms (Optimizely, Statsig).</p>
+    </div>
+  </div>
+  <span class="slide-num">APPENDIX</span>
+</section>
+
+<script>
+  class Deck {
+    constructor() {
+      this.slides = document.querySelectorAll('.slide');
+      this.n = this.slides.length;
+      this.cur = 0;
+      this.bar = document.getElementById('progress');
+      this.dots = document.getElementById('navDots');
+      this.buildDots();
+      this.observe();
+      this.keyboard();
+      this.wheel();
+      this.touch();
+      setTimeout(() => this.slides[0].classList.add('visible'), 80);
+    }
+    buildDots() {
+      this.dots.innerHTML = '';
+      this.slides.forEach((_, i) => {
+        const d = document.createElement('button');
+        d.className = 'dot' + (i === 0 ? ' active' : '');
+        d.setAttribute('aria-label', 'Slide ' + (i + 1));
+        d.onclick = () => this.go(i);
+        this.dots.appendChild(d);
+      });
+    }
+    observe() {
+      const io = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            this.cur = [...this.slides].indexOf(e.target);
+            this.bar.style.width = ((this.cur + 1) / this.n * 100) + '%';
+            this.dots.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === this.cur));
+          }
+        });
+      }, { threshold: 0.5 });
+      this.slides.forEach(s => io.observe(s));
+    }
+    go(i) {
+      if (i < 0 || i >= this.n) return;
+      this.cur = i;
+      this.slides[i].scrollIntoView({ behavior: 'smooth' });
+    }
+    keyboard() {
+      document.addEventListener('keydown', e => {
+        if (['ArrowDown','ArrowRight','Space','PageDown'].includes(e.code)) { e.preventDefault(); this.go(this.cur + 1); }
+        if (['ArrowUp','ArrowLeft','PageUp'].includes(e.code)) { e.preventDefault(); this.go(this.cur - 1); }
+        if (e.code === 'Home') { e.preventDefault(); this.go(0); }
+        if (e.code === 'End') { e.preventDefault(); this.go(this.n - 1); }
+      });
+    }
+    wheel() {
+      let last = 0;
+      document.addEventListener('wheel', e => {
+        const now = Date.now();
+        if (now - last < 650) return;
+        last = now;
+        if (Math.abs(e.deltaY) < 30) return;
+        e.deltaY > 0 ? this.go(this.cur + 1) : this.go(this.cur - 1);
+      }, { passive: true });
+    }
+    touch() {
+      let sy = 0;
+      document.addEventListener('touchstart', e => { sy = e.touches[0].clientY; }, { passive: true });
+      document.addEventListener('touchend', e => {
+        const dy = sy - e.changedTouches[0].clientY;
+        if (Math.abs(dy) < 40) return;
+        dy > 0 ? this.go(this.cur + 1) : this.go(this.cur - 1);
+      }, { passive: true });
+    }
+  }
+  window.addEventListener('DOMContentLoaded', () => new Deck());
+</script>
+</body>
+</html>

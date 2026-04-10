@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Presenter Notes — Engine PM Case Study</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f7f6f3;
+      --card: #ffffff;
+      --border: #e5e3de;
+      --text: #1a1a1a;
+      --text-2: #555;
+      --text-3: #999;
+      --orange: #e03d1a;
+      --yellow: #c78f00;
+      --green: #16a34a;
+      --red: #dc2626;
+      --blue: #2563eb;
+      --font: 'Manrope', sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; }
+    .page { max-width: 860px; margin: 0 auto; padding: 2rem 2rem 4rem; }
+
+    h1 { font-size: 1.5rem; font-weight: 900; margin-bottom: 0.25rem; }
+    .subtitle { font-size: 0.82rem; color: var(--text-3); margin-bottom: 2.5rem; }
+
+    .slide-block {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden;
+    }
+    .slide-header {
+      padding: 0.75rem 1.25rem;
+      display: flex; align-items: baseline; gap: 0.75rem;
+      border-bottom: 1px solid var(--border); background: #fafaf8;
+    }
+    .slide-num { font-size: 0.7rem; font-weight: 800; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; }
+    .slide-title { font-size: 0.95rem; font-weight: 800; }
+    .slide-body { padding: 1.1rem 1.25rem; display: flex; flex-direction: column; gap: 0.85rem; }
+
+    .section { border-left: 3px solid var(--border); padding-left: 0.85rem; }
+    .section.talk { border-color: var(--orange); }
+    .section.data { border-color: var(--blue); }
+    .section.assume { border-color: var(--yellow); }
+    .section.qa { border-color: var(--red); }
+    .section.tips { border-color: var(--green); }
+
+    .section-label {
+      font-size: 0.62rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.12em; margin-bottom: 0.35rem;
+    }
+    .section.talk .section-label { color: var(--orange); }
+    .section.data .section-label { color: var(--blue); }
+    .section.assume .section-label { color: var(--yellow); }
+    .section.qa .section-label { color: var(--red); }
+    .section.tips .section-label { color: var(--green); }
+
+    .section p, .section li { font-size: 0.82rem; color: var(--text-2); line-height: 1.6; }
+    .section ul { padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.3rem; }
+    .section .highlight { color: var(--text); font-weight: 700; }
+    .qa-item { margin-bottom: 0.6rem; }
+    .qa-q { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+    .qa-a { font-size: 0.82rem; color: var(--text-2); line-height: 1.55; margin-top: 0.15rem; }
+
+    .prep-block {
+      background: #fff8f0; border: 1px solid #fde8d8;
+      border-radius: 12px; padding: 1.1rem 1.25rem; margin-bottom: 1.5rem;
+    }
+    .prep-block h2 { font-size: 0.95rem; font-weight: 800; margin-bottom: 0.75rem; color: var(--orange); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    th { text-align: left; padding: 0.4em 0.65em; border-bottom: 1px solid var(--border); color: var(--text-3); font-weight: 700; text-transform: uppercase; font-size: 0.62rem; letter-spacing: 0.08em; }
+    td { padding: 0.45em 0.65em; border-bottom: 1px solid #f0eeea; color: var(--text-2); vertical-align: top; line-height: 1.45; }
+    td:first-child { font-weight: 700; color: var(--text); white-space: nowrap; }
+    tr:last-child td { border-bottom: none; }
+
+    @media print {
+      body { background: white; }
+      .slide-block { break-inside: avoid; page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Presenter Notes — Engine PM Case Study</h1>
+  <p class="subtitle">Akshay Sinha · 12 slides (11 content + appendix) · Keep open in a second tab during practice runs.</p>
+
+  <div class="prep-block">
+    <h2>Before You Begin: Know These Cold</h2>
+    <table>
+      <thead><tr><th>Assumption</th><th>The number</th><th>One-line defense</th></tr></thead>
+      <tbody>
+        <tr><td>GBV baseline</td><td>~$500M</td><td>Back-calculated from $2.1B Series C at 4-6x revenue multiples. Not confirmed by Engine.</td></tr>
+        <tr><td>Mobile share</td><td>~50% of sessions</td><td>Phocuswright industry norm. Engine-specific unconfirmed.</td></tr>
+        <tr><td>Android share</td><td>~28% of Engine mobile</td><td>JAMF 2024: 70-74% iOS in N. American corporate. Engine admin persona skews further iOS.</td></tr>
+        <tr><td>Android rating</td><td>3.6 / 5 stars</td><td>Google Play Store, 523 reviews. iOS: 4.7/5, 3,008 reviews. 1.1-star gap.</td></tr>
+        <tr><td>FlexPro ratio</td><td>40% bookings = 70% GBV</td><td>Engine press release, BusinessWire May 2025. Confirmed data.</td></tr>
+        <tr><td>Attach delta</td><td>+8 pts base case</td><td>Contextual upsells typically move 8-12 pts first iteration (fintech / travel benchmarks).</td></tr>
+        <tr><td>Combined GBV</td><td>$30-35M realistic</td><td>P0 ($8-10M) + P1 ($30M) minus 15% co-variance discount. Android-recovered sessions enter FlexPro funnel.</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:0.78rem;color:var(--text-3);margin-top:0.65rem;"><strong style="color:var(--orange);">Never say:</strong> "losing," "broken," "failed," "costing us." Always: "opportunity to capture," "room to close," "hasn't kept pace," "path forward."</p>
+  </div>
+
+  <div class="slide-block">
+    <div class="slide-header">
+      <span class="slide-num">01 / 12</span>
+      <span class="slide-title">Title — Two focused opportunities for near-term lodging growth</span>
+    </div>
+    <div class="slide-body">
+      <div class="section talk">
+        <div class="section-label">Talk Track</div>
+        <p>"I'm going to walk you through two specific opportunities I identified in Engine's lodging product, both executable in Q1. Everything I'll show you is grounded in public data, a live product audit, and explicit assumptions I'll flag as we go. I want you to be able to stress-test every number."</p>
+      </div>
+      <div class="section tips">
+        <div class="section-label">Delivery</div>
+        <p>Do not rush through this slide. Let the room settle. Eye contact. The tone you set here is: confident, specific, intellectually honest. Not salesy, not defensive.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-block">
+    <div class="slide-header">
+      <span class="slide-num">02 / 12</span>
+      <span class="slide-title">Assumptions — 7 assumptions that underpin every number</span>
+    </div>
+    <div class="slide-body">
+      <div class="section talk">
+        <div class="section-label">Talk Track</div>
+        <p>"Before I show you any analysis, I want to put all my assumptions on the table. Every number you'll see in the next 10 slides is built on these seven. I've labeled each with its source and what changes if I'm wrong. This isn't hedging. It's how I want this conversation to go. If any assumption is off, we can update the math in real time."</p>
+      </div>
+      <div class="section assume">
+        <div class="section-label">Key Assumptions to Call Out Proactively</div>
+        <ul>
+          <li><span class="highlight">GBV ~$500M:</span> Back-calculated, not confirmed. If they share the actual number, update the dollar estimates on the fly.</li>
+          <li><span class="highlight">Android ~28%:</span> The most commonly challenged assumption. Be ready with the JAMF 2024 enterprise device data and admin persona skew reasoning.</li>
+          <li><span class="highlight">Funnel percentages:</span> Industry benchmarks, not Engine's actuals. Say so before they ask.</li>
+        </ul>
+      </div>
+      <div class="section qa">
+        <div class="section-label">Hard Q&amp;A</div>
+        <div class="qa-item">
+          <div class="qa-q">Why not just ask for the actual data before presenting?</div>
+          <div class="qa-a">I sent a clarifying email to ProductHiring@engine.com with exactly these questions. I presented with assumptions because the case was time-bound. The assumptions are labeled so the analysis is immediately updatable when Engine provides actuals.</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-q">How confident are you in the 28% Android figure?</div>
+          <div class="qa-a">Medium confidence. Derived from JAMF 2024 enterprise device data, applied conservatively to Engine's booking persona. Honest range: 20-35%. At 20%, the Android GBV estimate drops to ~$6M. At 35%, rises to ~$10.5M. The mechanism bet holds at any point in that range.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-block">
+    <div class="slide-header">
+      <span class="slide-num">03 / 12</span>
+      <span class="slide-title">Market — SMB teams travel constantly, without a travel program</span>
+    </div>
+    <div class="slide-body">
+      <div class="section talk">
+        <div class="section-label">Talk Track</div>
+        <p>"The $30B in unmanaged SMB travel is not latent demand. It is active spend happening right now through personal cards and direct bookings. Engine's penetration is under 2% of that market. The opportunity isn't creating new demand. It's capturing spend that already exists from customers who already want a better solution."</p>
+      </div>
+      <div class="section data">
+        <div class="section-label">Data to Cite</div>
+        <ul>
+          <li>$30B+ annual US unmanaged hotel spend — Business Travel News / Engine market framing</li>
+          <li>75% of SMB business travel is unmanaged — Engine positioning, BTN</li>
+          <li>26% average savings — engine.com/pricing</li>
+          <li>$202M customer savings in 2024 — BusinessWire May 2025</li>
+          <li>85,000+ hotels, 6 major chain partnerships — engine.com/hotel-partners</li>
+          <li>$2.1B valuation, $140M Series C — Crunchbase</li>
+        </ul>
+      </div>
+      <div class="section qa">
+        <div class="section-label">Hard Q&amp;A</div>
+        <div class="qa-item">
+          <div class="qa-q">Why isn't Navan already winning this segment?</div>
+          <div class="qa-a">Navan targets distributed enterprise — companies with 1,000+ employees, existing IT infrastructure, and budget for a multi-product T&amp;E platform. Engine's 100-500 person SMB target cannot afford that overhead. Engine wins on rates plus simplicity, not features.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-block">
+    <div class="slide-header">
+      <span class="slide-num">04 / 12</span>
+      <span class="slide-title">My Approach — Four surfaces, two high-confidence opportunities</span>
+    </div>
+    <div class="slide-body">
+      <div class="section talk">
+        <div class="section-label">Talk Track</div>
+        <p>"I evaluated the product across four surfaces: search and discovery, booking and checkout, post-booking, and mobile parity. I prioritized by GBV impact, evidence quality, time to value, and engineering lift. Two opportunities cleared all four filters with strong evidence and Q1 timelines. Two longer-horizon opportunities, AI discovery and group booking, are real but require more build and have thinner signal. They appear in the roadmap but are not the focus today."</p>
+      </div>
+      <div class="section assume">
+        <div class="section-label">Delivery Note</div>
+        <p>The conclusion box — "Two opportunities. Documented evidence. Q1 executable." — should land as a verdict, not a hedge. Say it with conviction. The assumptions slide already did the epistemic work.</p>
+      </div>
+      <div class="section qa">
+        <div class="section-label">Hard Q&amp;A</div>
+        <div class="qa-item">
+          <div class="qa-q">Why only two opportunities? Are you leaving money on the table?</div>
+          <div class="qa-a">The two I'm recommending are recoverable from sessions already in the funnel. Adding a third concurrent bet like AI discovery would spread engineering attention and delay signal on the highest-confidence opportunities. Focus is the constraint, not ambition.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-block">
+    <div class="slide-header">
+      <span class="slide-num">05 / 12</span>
+      <span class="slide-title">Funnel — Both opportunities operate mid-funnel</span>
+    </div>
+    <div class="slide-body">
+      <div class="section talk">
+        <div class="section-label">Talk Track</div>
+        <p>"Both opportunities operate exactly where the transaction is already in progress. Opportunity 1 addresses the drop from property view to booking completion on Android. Opportunity 2 addresses the checkout moment, where FlexPro can be presented contextually rather than generically. Neither requires new top-of-funnel traffic. They recover value from sessions Engine already has."</p>
+      </div>
+      <div class="section assume">
+        <div class="section-label">Assumption to State Proactively</div>
+        <p>"These funnel percentages are Phocuswright and PlanetHMS benchmarks, not Engine's confirmed conversion rates. The location of each opportunity is supported by public review signals, even if the exact magnitude is estimated. I asked for Engine's actual funnel data in the clarifying email."</p>
+      </div>
+      <div class="section qa">
+        <div class="section-label">Hard Q&amp;A</div>
+        <div class="qa-item">
+          <div class="qa-q">Are these funnel numbers Engine's actuals?</div>
+          <div class="qa-a">No. They are industry benchmarks used as a proxy. The location of each opportunity is confirmed by documented review signals and product audit. The exact percentages are illustrative. I would update them immediately with Engine's actual conversion data.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-block">
+    <div class="slide-header">
+      <span class="slide-num">06 / 12</span>
+      <span class="slide-title">Opportunity 1: Evidence — Android hasn't kept pace with iOS</span>
+    </div>
+    <div class="slide-body">
+      <div class="section talk">
+        <div class="section-label">Talk Track</div>
+        <p>"The Android app has a 1.1-star gap versus iOS — 3.6 versus 4.7. What is documented in the reviews is not aesthetic dissatisfaction. It is transactional failure: login loops blocking booking, a missing cancel button, bookings that disappear on confirmation. These aren't inconveniences — they're GBV we never recover because the session was already at checkout."</p>
+        <p style="margin-top:0.5em;">"For Engine specifically, Android is a smaller share of mobile than the industry average — approximately 28%, not 45-50%. That's because Engine's booking persona skews iOS in corporate environments. But the field worker sub-segment — construction, healthcare — runs Android, and they're among the hardest accounts to retain when they have a bad experience."</p>
+      </div>
+      <div class="section data">
+        <div class="section-label">Data to Cite</div>
+        <ul>
+          <li>Android: <strong>3.6 / 5</strong> (523 reviews) — Google Play Store</li>
+          <li>iOS: <strong>4.7 / 5</strong> (3,008 reviews) — App Store</li>
+          <li>Gap: <strong>1.1 stars</strong></li>
+          <li>Documented issues: auth failure loops, missing cancel button, booking completion failures</li>
+          <li>Android ~28% of Engine mobile sessions (JAMF 2024 enterprise device data)</li>
+        </ul>
+      </div>
+      <div class="section assume">
+        <div class="section-label">Assumption Note</div>
+        <p>The review quotes on the slide are paraphrased from documented Google Play review patterns, not fabricated. Label them as such if asked. The 28% Android share is derived from JAMF 2024. See Slide 2 for full sensitivity.</p>
+      </div>
+      <div class="section qa">
+        <div class="section-label">Hard Q&amp;A</div>
+        <div class="qa-item">
+          <div class="qa-q">Is the rating gap really significant? 3.6 vs 4.7 could be review selection bias.</div>
+          <div class="qa-a">The rating itself is a signal, not the evidence. The evidence is the specificity of the complaints — auth loops after a specific login update, a missing cancellation button, booking completion failures mid-flow. These are transactional failures. You cannot dismiss them as selection bias when the same users rate iOS 4.7.</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-q">How do you know Android drives meaningful GBV if it's only 28% of mobile?</div>
+          <div class="qa-a">28% of 50% of $500M is $70M in annual Android-attributed mobile GBV. A 12% recoverable completion gap on that pool is $8.4M. Even at half that estimate, it is over $4M from a 4-week sprint. The field-worker sub-segment on Android also has high LTV if retained.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-block">
+    <div class="slide-header">
+      <span class="slide-num">07 / 12</span>
+      <span class="slide-title">Opportunity 1: Plan — 4-week parity sprint</span>
+    </div>
+    <div class="slide-body">
+      <div class="section talk">
+        <div class="section-label">Talk Track</div>
+        <p>"This is a 4-week sprint, not a feature build. Items 1 through 4 are fixes on existing functionality, not new capabilities. With AI-assisted development tooling available in 2026, auth and session work that previously required 3 weeks can be scoped and shipped in 1-2. Week 5 is a monitoring period, not sprint scope."</p>
+        <p style="margin-top:0.5em;">"Success is not just parity with iOS. Success is also a 2-point improvement in overall mobile conversion rate. And the leading signal — the one I'll check the morning after release — is whether auth error rates drop to near zero within 48 hours."</p>
+      </div>
+      <div class="section data">
+        <div class="section-label">GBV Math to Know Cold</div>
+        <ul>
+          <li>$500M × 50% × 28% × 12% = <strong>$8.4M</strong></li>
+          <li>Stated range: <strong>$8-10M</strong> (accounts for upside in recoverable gap estimate)</li>
+          <li>At $300M actual GBV: ~$5M. At $700M: ~$12M.</li>
+          <li>Full sample size math: Appendix, Slide 12</li>
+        </ul>
+      </div>
+      <div class="section qa">
+        <div class="section-label">Hard Q&amp;A</div>
+        <div class="qa-item">
+          <div class="qa-q">Why 4 weeks? Couldn't this take longer if the auth issue is infrastructure-level?</div>
+          <div class="qa-a">That is exactly why Week 1 is a technical spike before the full sprint commits. The spike determines whether the auth failure is in the session layer (fast fix) or shared infrastructure (longer, potentially requires architectural work). The sprint adapts based on spike findings. I would not commit 2 engineers for 4 weeks before that spike completes.</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-q">What if you only have half the engineering capacity?</div>
+          <div class="qa-a">Cut push notification parity from sprint scope. Items 1-3 (auth, completion, cancel) are the GBV-bearing fixes. Sprint with 1 engineer on auth and completion, defer push to Q2.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-block">
+    <div class="slide-header">
+      <span class="slide-num">08 / 12</span>
+      <span class="slide-title">Opportunity 2: Evidence — The 40/70 ratio reveals where high-value customers are</span>
+    </div>
+    <div class="slide-body">
+      <div class="section talk">
+        <div class="section-label">Talk Track</div>
+        <p>"The most interesting number in Engine's public data: 40% of bookings use FlexPro, but those bookings represent 70% of GBV. That is a 1.75x spend multiplier. FlexPro users book higher ADR — Average Daily Rate, meaning average room revenue per occupied night — properties more frequently and with more confidence because they know they can cancel."</p>
+        <p style="margin-top:0.5em;">"FlexPro is currently surfaced at the account level, before any specific booking is in progress. The opportunity is to move that moment to checkout, where the user is already committed to a property and can see exactly what they're protecting. The cost and benefit are immediate and concrete. That is when a user is most likely to say yes."</p>
+      </div>
+      <div class="section data">
+        <div class="section-label">Data to Cite</div>
+        <ul>
+          <li><strong>40%/70% ratio</strong> — Engine press release, BusinessWire May 2025 (confirmed data)</li>
+          <li><strong>1.75x spend multiplier</strong> — derived from ratio (70/40 = 1.75)</li>
+          <li><strong>FlexPro: $200/month</strong> for company-wide free cancellation and modification</li>
+          <li>Real product images on slide from engine.com/flexibility-to-change-travel-plans</li>
+        </ul>
+      </div>
+      <div class="section assume">
+        <div class="section-label">Assumption to State</div>
+        <p>The "generic" characterization of the current upsell is based on a product audit of public-facing engine.com. If Engine has already built a contextual checkout trigger internally, Opportunity 2 scope changes from "build" to "iterate." This is exactly why I asked about prior A/B test history in the clarifying email.</p>
+      </div>
+      <div class="section qa">
+        <div class="section-label">Hard Q&amp;A</div>
+        <div class="qa-item">
+          <div class="qa-q">How do you know the current upsell is generic?</div>
+          <div class="qa-a">Based on the public-facing product audit and public screenshots. I cannot see the authenticated checkout flow without an account. This is a hypothesis grounded in what is publicly visible. Verifying it with an authenticated session before sprint kickoff takes 30 minutes. I flagged it on Slide 2.</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-q">Won't pushing FlexPro harder just increase cancellation rates?</div>
+          <div class="qa-a">That is exactly the guardrail metric. We track FlexPro attach rate and cancellation rate simultaneously from day one. If attach rises but cancel rate rises proportionally, we are attracting bookings that would have cancelled anyway. A well-framed contextual prompt converts users who genuinely value flexibility, and those users cancel less than users who signed up without understanding the product.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-block">
+    <div class="slide-header">
+      <span class="slide-num">09 / 12</span>
+      <span class="slide-title">Opportunity 2: Plan — 5-week build and test, early call via leading indicators</span>
+    </div>
+    <div class="slide-body">
+      <div class="section talk">
+        <div class="section-label">Talk Track</div>
+        <p>"The build is 2 weeks. Three things: contextual trigger logic at checkout tied to the property's cancellation policy, dynamic copy showing cost and benefit in terms of this specific booking, and A/B infrastructure for a 50/50 split."</p>
+        <p style="margin-top:0.5em;">"We do not need to wait 8 weeks for a result. Leading indicators let us call the mechanism valid by week 3 or 4. Week 1 tells us whether the contextual prompt drives more engagement than the generic banner. Week 2-3 tells us whether users who engage are adding FlexPro. If both are directionally positive, we call the mechanism validated and scale."</p>
+      </div>
+      <div class="section data">
+        <div class="section-label">GBV Math to Know Cold</div>
+        <ul>
+          <li>Conservative (+5 pts): $500M × 5% × 0.75 = <strong>$19M</strong></li>
+          <li>Base case (+8 pts): $500M × 8% × 0.75 = <strong>$30M</strong></li>
+          <li>Upside (+12 pts): $500M × 12% × 0.75 = <strong>$45M</strong></li>
+          <li>Combined with Android (co-variance 15%): <strong>$30-35M</strong></li>
+          <li>Net revenue at 10-15% commission: <strong>$3-5M</strong></li>
+        </ul>
+      </div>
+      <div class="section qa">
+        <div class="section-label">Hard Q&amp;A</div>
+        <div class="qa-item">
+          <div class="qa-q">Is $30M realistic from a UI change?</div>
+          <div class="qa-a">The math is conservative, not aggressive. Contextual upsells in fintech and travel typically move 8-12 points first iteration — this uses the low end. The 40%/70% ratio is confirmed Engine data. At $300M GBV, the base case drops to $18M. Even then, a 2-week build generating $18M in GBV is a high-return investment. The mechanism bet — contextual beats generic at maximum intent — holds at any GBV baseline.</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-q">Why not run the full 8 weeks for proper statistical power?</div>
+          <div class="qa-a">At 200+ daily checkout sessions, full power arrives in 5-6 weeks anyway. Leading indicators at week 3-4 accelerate the business decision point without replacing the statistical test. We use Bayesian monitoring or sequential testing (mSPRT) to enable valid early stopping, not raw p-value peeking. See Appendix for detail.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-block">
+    <div class="slide-header">
+      <span class="slide-num">10 / 12</span>
+      <span class="slide-title">Roadmap — Q1 concurrent, Q2+ builds on signal</span>
+    </div>
+    <div class="slide-body">
+      <div class="section talk">
+        <div class="section-label">Talk Track</div>
+        <p>"Both opportunities run concurrently in Q1 because they are independent workstreams with different skill requirements. The Android sprint needs mobile engineers. The FlexPro upsell needs a product engineer and a copy iteration loop. No sequencing dependency."</p>
+        <p style="margin-top:0.5em;">"Q2 is where we build on signal from Q1. FlexPro iteration if the test succeeds. Rules-based Business Value Score for search ranking — shadow-ranked before any traffic exposure. Q3-Q4 is group booking and ML ranking, which require more build and more signal. The phases compound: every completed booking in Q1 generates behavioral data that makes Q2's discovery engine more accurate."</p>
+      </div>
+      <div class="section qa">
+        <div class="section-label">Hard Q&amp;A</div>
+        <div class="qa-item">
+          <div class="qa-q">What if the FlexPro test fails in Q1?</div>
+          <div class="qa-a">We learn in week 3-4 and pivot. The learnings — which copy drove engagement, which user segments reacted, which properties correlated with FlexPro interest — are valuable inputs to Q2 iteration. A failed A/B test that generates clean signal is not wasted time. It is the fastest path to the right frame.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-block">
+    <div class="slide-header">
+      <span class="slide-num">11 / 12</span>
+      <span class="slide-title">Metrics + Close — Three levers, one outcome</span>
+    </div>
+    <div class="slide-body">
+      <div class="section talk">
+        <div class="section-label">Talk Track</div>
+        <p>"Three metrics drive GBV. Mobile booking completion rate — more sessions convert to bookings. FlexPro attach rate at checkout — each booking is worth more. And 90-day repeat booking rate — users return without acquisition cost. These three are the story. GBV is the outcome."</p>
+        <p style="margin-top:0.5em;">"The guardrails are simple: support tickets per booking must not rise as we speed up checkout, and cancellation rate must not worsen as we push FlexPro harder. That is the Q1 plan. Fix the conversion floor. Make FlexPro contextual. Thank you."</p>
+      </div>
+      <div class="section data">
+        <div class="section-label">Metric Definitions</div>
+        <ul>
+          <li><strong>CVR (Mobile booking completion rate):</strong> Completed bookings / total mobile booking sessions. Measured by platform: iOS and Android separately.</li>
+          <li><strong>ATR (FlexPro attach rate):</strong> Bookings with FlexPro / total completed bookings at checkout, not account level.</li>
+          <li><strong>RET (90-day repeat booking rate):</strong> Users with 2+ bookings in 90 days / users with at least 1 booking.</li>
+          <li><strong>GBV:</strong> Gross Booking Value — total hotel spend processed through Engine. North star.</li>
+          <li><strong>ADR:</strong> Average Daily Rate — average room revenue per occupied room per night.</li>
+        </ul>
+      </div>
+      <div class="section qa">
+        <div class="section-label">Hard Q&amp;A</div>
+        <div class="qa-item">
+          <div class="qa-q">What is $30-35M in net revenue, not GBV?</div>
+          <div class="qa-a">At Engine's commission model — approximately 10-15% of booking value from hotel partners — $30-35M in GBV converts to $3-5M in net revenue. Meaningful from two Q1 bets. And it compounds: FlexPro users at 1.75x spend generate higher-margin bookings in future quarters.</div>
+        </div>
+      </div>
+      <div class="section tips">
+        <div class="section-label">Delivery</div>
+        <p>End with conviction. "Thank you. Questions?" — pause, make eye contact, do not add anything after "Questions?" Let the room lead.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-block">
+    <div class="slide-header">
+      <span class="slide-num">APPENDIX</span>
+      <span class="slide-title">A/B Test Power Calculations</span>
+    </div>
+    <div class="slide-body">
+      <div class="section tips">
+        <div class="section-label">When to Use This Slide</div>
+        <p>Reference only if directly asked about test duration, sample size, or statistical methodology. Do not navigate here proactively — it is reference material, not part of the main narrative.</p>
+      </div>
+      <div class="section qa">
+        <div class="section-label">Hard Q&amp;A — Why No A/B Test for Android?</div>
+        <div class="qa-item">
+          <div class="qa-q">Why don't you run a proper A/B test for the Android fix?</div>
+          <div class="qa-a">A holdback group would mean deliberately continuing to expose half of Android users to a broken booking experience — auth loops, missing cancel button, completion failures. That is not ethically defensible when the fix is ready. Instead: iOS behavior is the natural control. We measure Android completion rate before vs. after release, with iOS as the stable baseline. If Android improves materially while iOS holds flat, the fix is validated. Leading signal: auth error rate drops to near-zero within 48 hours of release. This is standard practice for bug-fix releases, not feature launches.</div>
+        </div>
+      </div>
+      <div class="section data">
+        <div class="section-label">Opportunity 1 (Android): Key Numbers</div>
+        <ul>
+          <li>Not a traditional A/B test — before/after measurement with iOS as natural control</li>
+          <li>MDE: 2 ppt improvement. Alpha 0.05, power 0.80</li>
+          <li>Required sample: ~2,400 Android sessions. At 500+ daily sessions: readable in 5-7 days.</li>
+          <li>Leading indicator: auth error rate drops to near-zero within 48 hours of release</li>
+        </ul>
+      </div>
+      <div class="section data">
+        <div class="section-label">Opportunity 2 (FlexPro): Key Numbers</div>
+        <ul>
+          <li>True A/B test: 50/50 split at checkout</li>
+          <li>Baseline: 40%. MDE: +2 ppt. Alpha 0.05, power 0.80</li>
+          <li>Required per arm: ~3,800 checkout sessions. Total: ~7,600</li>
+          <li>At 200+ daily checkout sessions: full power in ~5-6 weeks</li>
+          <li>Early call possible at week 3-4 via Bayesian monitoring or sequential testing (mSPRT)</li>
+          <li>Formula: n = (z_a/2 + z_b)^2 × [p1(1-p1) + p2(1-p2)] / (p2-p1)^2</li>
+        </ul>
+      </div>
+      <div class="section assume">
+        <div class="section-label">Early Stopping Caveat</div>
+        <p>Fixed-horizon significance tests with early peeking inflate false positive rates. Use sequential testing or Bayesian monitoring (Statsig, Optimizely) to enable valid early stopping. Do not call the test early based on raw p-values from a two-proportion z-test.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
